@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== ENUMS =====
+
+enum Role {
+  PARTICIPANT
+  VIEWER
+}
+
+enum SessionStatus {
+  WAITING
+  IN_PROGRESS
+  VOTING
+  COMPLETED
+}
+
+enum VoteValue {
+  TRUE
+  FALSE
+}
+
+enum QuestionCategory {
+  PERSONAL
+  SITUATIONS
+  BELIEFS
+  PAST
+  RELATIONSHIPS
+  SECRETS
+}
+
+// ===== MODELS =====
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  username           String    @unique
+  role               Role      @default(PARTICIPANT)
+  trustScore         Float     @default(50.0)
+  lastAppearanceDate DateTime?
+  isFrozen           Boolean   @default(false)
+  appearanceCount    Int       @default(0)
+  lastActiveAt       DateTime  @default(now())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  sessions          Session[]
+  votes             Vote[]
+  groupAssignments  GroupAssignment[]
+
+  @@index([lastActiveAt])
+  @@index([role, isFrozen, lastAppearanceDate])
+}
+
+model Session {
+  id            String        @id @default(cuid())
+  participantId String
+  status        SessionStatus @default(WAITING)
+  startedAt     DateTime?
+  endedAt       DateTime?
+  trueVotes     Int           @default(0)
+  falseVotes    Int           @default(0)
+  totalVotes    Int           @default(0)
+  trustResult   Float?
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  participant   User          @relation(fields: [participantId], references: [id])
+  answers       Answer[]
+  votes         Vote[]
+  group         SessionGroup?
+
+  @@index([status])
+  @@index([participantId])
+  @@index([createdAt])
+}
+
+model Question {
+  id         String           @id @default(cuid())
+  text       String
+  category   QuestionCategory
+  usageCount Int              @default(0)
+  isActive   Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+
+  // Relations
+  answers    Answer[]
+
+  @@index([category, isActive])
+  @@index([usageCount])
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  sessionId  String
+  questionId String
+  text       String   @db.VarChar(150)
+  revealedAt DateTime?
+  orderIndex Int
+  createdAt  DateTime @default(now())
+
+  // Relations
+  session    Session  @relation(fields: [sessionId], references: [id])
+  question   Question @relation(fields: [questionId], references: [id])
+
+  @@unique([sessionId, questionId])
+  @@unique([sessionId, orderIndex])
+}
+
+model Vote {
+  id        String    @id @default(cuid())
+  sessionId String
+  voterId   String
+  vote      VoteValue
+  createdAt DateTime  @default(now())
+
+  // Relations
+  session   Session   @relation(fields: [sessionId], references: [id])
+  voter     User      @relation(fields: [voterId], references: [id])
+
+  @@unique([sessionId, voterId])
+  @@index([sessionId])
+}
+
+model SessionGroup {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  createdAt DateTime @default(now())
+
+  // Relations
+  session     Session           @relation(fields: [sessionId], references: [id])
+  assignments GroupAssignment[]
+}
+
+model GroupAssignment {
+  id        String   @id @default(cuid())
+  groupId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  group     SessionGroup @relation(fields: [groupId], references: [id])
+  user      User         @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
