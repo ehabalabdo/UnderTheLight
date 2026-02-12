@@ -46,6 +46,18 @@ export default function Home() {
             </Link>
           </div>
 
+          {/* رابط المحاكاة */}
+          <div className="mt-6">
+            <Link
+              href="/simulation"
+              className="inline-flex items-center gap-2 text-amber-400/70 hover:text-amber-400 transition text-sm"
+            >
+              <span>🎬</span>
+              <span>أول مرة هنا؟ شاهد كيف يعمل الموقع</span>
+              <span>←</span>
+            </Link>
+          </div>
+
           {/* Features */}
           <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
             <div className="p-6 rounded-xl bg-white/5 border border-white/10">
